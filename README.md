@@ -2,7 +2,7 @@
 
 **Goal:** Stitch together serverless (Lambda) and container-orchestrated (EKS) services into a single, observable workflow.
 
-## Architecture (1 page)
+## Architecture 
 - S3 (`raw-images/`) upload event → **Lambda** (Node.js, <100 LOC) → publishes object key to **SNS**.
 - **SQS** subscribed to SNS (raw delivery).
 - **EKS** consumer (Node.js service, Docker image <200MB) polls SQS, resizes image (Sharp), writes to the same bucket under `thumbnails/`.
