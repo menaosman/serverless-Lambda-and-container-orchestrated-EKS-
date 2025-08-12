@@ -1,0 +1,13 @@
+AWS_REGION=us-east-1
+PROJECT=image-pipeline
+# Use a globally-unique bucket name. You can change this later before deploy.
+BUCKET_NAME=image-pipeline-1755021351
+TOPIC_NAME=image-keys-topic
+QUEUE_NAME=image-keys-queue
+LAMBDA_NAME=image-key-publisher
+ECR_REPO=image-consumer
+EKS_CLUSTER=image-pipeline
+EKS_NODE_TYPE=t3.small
+EKS_NODE_COUNT=1
+ALARM_EMAIL=your-email@example.com
+EKS_IAM_USER_NAME=image-pipeline-consumer
