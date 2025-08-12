@@ -18,7 +18,7 @@ ECR_REPO="${ECR_REPO:-image-consumer}"
 EKS_CLUSTER="${EKS_CLUSTER:-image-pipeline}"
 EKS_NODE_TYPE="${EKS_NODE_TYPE:-t3.small}"
 EKS_NODE_COUNT="${EKS_NODE_COUNT:-1}"
-ALARM_EMAIL="${ALARM_EMAIL:-you@example.com}"
+ALARM_EMAIL="${ALARM_EMAIL:menaosman839@gmail.com}"
 EKS_IAM_USER_NAME="${EKS_IAM_USER_NAME:-image-pipeline-consumer}"
 
 echo "Region: $AWS_REGION"
