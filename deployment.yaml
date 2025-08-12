@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: image-consumer
+  namespace: image-pipeline
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: image-consumer
+  template:
+    metadata:
+      labels:
+        app: image-consumer
+    spec:
+      containers:
+      - name: image-consumer
+        image: REPLACE_WITH_ECR_IMAGE_URI
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: AWS_REGION
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: AWS_REGION
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: AWS_ACCESS_KEY_ID
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: AWS_SECRET_ACCESS_KEY
+        - name: QUEUE_URL
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: QUEUE_URL
+        - name: BUCKET_NAME
+          valueFrom:
+            secretKeyRef:
+              name: aws-creds
+              key: BUCKET_NAME
+        - name: WORKERS
+          value: "2"
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+        readinessProbe:
+          exec:
+            command: ["node", "-e", "process.exit(0)"]
+          initialDelaySeconds: 5
+          periodSeconds: 15
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: image-pipeline
