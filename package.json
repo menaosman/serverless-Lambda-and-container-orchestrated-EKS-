@@ -1,11 +1,9 @@
 {
-  "name": "image-consumer",
+  "name": "image-key-publisher",
   "version": "1.0.0",
   "type": "module",
-  "main": "src/index.js",
+  "main": "index.js",
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.588.0",
-    "@aws-sdk/client-sqs": "^3.588.0",
-    "sharp": "^0.33.4"
+    "@aws-sdk/client-sns": "^3.588.0"
   }
 }

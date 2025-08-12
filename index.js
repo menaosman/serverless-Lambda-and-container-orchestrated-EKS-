@@ -1,78 +1,27 @@
-import { SQSClient, ReceiveMessageCommand, DeleteMessageCommand, ChangeMessageVisibilityCommand } from "@aws-sdk/client-sqs";
-import { S3Client, GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
-import sharp from "sharp";
+import { SNSClient, PublishCommand } from "@aws-sdk/client-sns";
 
-const region = process.env.AWS_REGION;
-const queueUrl = process.env.QUEUE_URL;
-const bucket = process.env.BUCKET_NAME;
-const concurrency = parseInt(process.env.WORKERS || "2", 10);
+const sns = new SNSClient({ region: process.env.AWS_REGION });
+const topicArn = process.env.TOPIC_ARN;
 
-const sqs = new SQSClient({ region });
-const s3 = new S3Client({ region });
-
-async function resizeImage(buffer) {
-  // Resize to 256px width, keep aspect ratio; output JPEG
-  return await sharp(buffer).resize({ width: 256 }).jpeg({ quality: 80 }).toBuffer();
-}
-
-async function processMessage(msg) {
+// S3 Put event → publish object key to SNS
+export const handler = async (event) => {
   try {
-    const body = JSON.parse(msg.Body);
-    // If SNS to SQS (raw delivery), body is our JSON
-    const { bucket: b, key } = body;
-    console.log("Processing", b, key);
+    // Grab first record (one object per event in this demo)
+    const rec = event?.Records?.[0];
+    if (!rec) throw new Error("No S3 record");
+    const key = decodeURIComponent(rec.s3.object.key);
+    const bucket = rec.s3.bucket.name;
 
-    const getObj = await s3.send(new GetObjectCommand({ Bucket: b, Key: key }));
-    const bytes = Buffer.from(await getObj.Body.transformToByteArray());
-    const out = await resizeImage(bytes);
-
-    const thumbKey = key.replace(/^raw-images\//, "thumbnails/");
-    await s3.send(new PutObjectCommand({
-      Bucket: b,
-      Key: thumbKey,
-      Body: out,
-      ContentType: "image/jpeg"
+    const msg = JSON.stringify({ bucket, key });
+    await sns.send(new PublishCommand({
+      TopicArn: topicArn,
+      Message: msg
     }));
 
-    console.log("Wrote thumbnail to s3://%s/%s", b, thumbKey);
-
-    await sqs.send(new DeleteMessageCommand({
-      QueueUrl: queueUrl,
-      ReceiptHandle: msg.ReceiptHandle
-    }));
+    console.log("Published to SNS:", msg);
+    return { statusCode: 200, body: "OK" };
   } catch (err) {
-    console.error("Worker error:", err);
-    // extend visibility to retry later
-    try {
-      await sqs.send(new ChangeMessageVisibilityCommand({
-        QueueUrl: queueUrl,
-        ReceiptHandle: msg.ReceiptHandle,
-        VisibilityTimeout: 60
-      }));
-    } catch {}
+    console.error("Lambda error:", err);
+    throw err;
   }
-}
-
-async function pollLoop(id) {
-  console.log("Worker %d started", id);
-  while (true) {
-    try {
-      const resp = await sqs.send(new ReceiveMessageCommand({
-        QueueUrl: queueUrl,
-        MaxNumberOfMessages: 1,
-        WaitTimeSeconds: 20,
-        VisibilityTimeout: 30
-      }));
-      if (resp.Messages && resp.Messages.length) {
-        await processMessage(resp.Messages[0]);
-      }
-    } catch (e) {
-      console.error("Poll error:", e);
-      await new Promise(r => setTimeout(r, 2000));
-    }
-  }
-}
-
-for (let i=0; i<concurrency; i++) {
-  pollLoop(i+1);
-}
+};
